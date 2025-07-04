@@ -23,7 +23,7 @@ messaging.onBackgroundMessage(payload => {
     const notificationOptions = {
         body: payload.notification.body,
         icon: '/icon.png', // Ensure icon.png exists in your GitHub repo root
-        data: { url: payload.data?.url || 'https://your-website.com' } // Fallback URL
+        data: { url: payload.data?.url || 'https://nowiba.github.io/remind/' } // Fallback URL
     };
 
     self.registration.showNotification(notificationTitle, notificationOptions);
@@ -32,7 +32,7 @@ messaging.onBackgroundMessage(payload => {
 // Handle notification click
 self.addEventListener('notificationclick', event => {
     event.notification.close();
-    const urlToOpen = event.notification.data.url || 'https://your-website.com';
+    const urlToOpen = event.notification.data.url || 'https://nowiba.github.io/remind/';
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true })
             .then(clientList => {
