@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appointment Reminder</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+            margin: 0;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            color: #333;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #status {
+            margin-top: 20px;
+            color: green;
+            font-size: 18px;
+        }
+        #status.error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>Appointment Booking</h1>
+    <button id="enableNotifications">Enable Notifications</button>
+    <p id="status"></p>
+
+    <script type="module">
+        // Import Firebase SDK
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+        import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js';
+
+        // Firebase configuration (replace with your Firebase project config)
+        const firebaseConfig = {
+ apiKey: "AIzaSyCSvfuFeeG0952SOT1s6yOPEyprPo_d22s",
+  authDomain: "nowiba-project.firebaseapp.com",
+  databaseURL: "https://nowiba-project-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "nowiba-project",
+  storageBucket: "nowiba-project.firebasestorage.app",
+  messagingSenderId: "1058905312580",
+  appId: "1:1058905312580:web:d2820c8dade0c3ebb45b11",
+  measurementId: "G-F5Y0HKDJ6M"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const messaging = getMessaging(app);
+
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/firebase-messaging-sw.js')
+                .then(registration => {
+                    console.log('Service Worker registered with scope:', registration.scope);
+                    // Use the service worker for FCM
+                    messaging.useServiceWorker(registration);
+                })
+                .catch(err => {
+                    console.error('Service Worker registration failed:', err);
+                    document.getElementById('status').textContent = 'Failed to register service worker.';
+                    document.getElementById('status').classList.add('error');
+                });
+        } else {
+            document.getElementById('status').textContent = 'Service workers not supported in this browser.';
+            document.getElementById('status').classList.add('error');
+        }
+
+        // Request notification permission
+        document.getElementById('enableNotifications').addEventListener('click', async () => {
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    document.getElementById('status').textContent = 'Notifications enabled!';
+                    await getFCMToken();
+                } else {
+                    document.getElementById('status').textContent = 'Notifications permission denied.';
+                    document.getElementById('status').classList.add('error');
+                }
+            } catch (err) {
+                console.error('Error requesting permission:', err);
+                document.getElementById('status').textContent = 'Error requesting notification permission.';
+                document.getElementById('status').classList.add('error');
+            }
+        });
+
+        // Get FCM token
+        async function getFCMToken() {
+            try {
+                const token = await getToken(messaging, { vapidKey: 'BFNprm_XvlivqzG6kUEZzaGLKQviJ5q_qeuiuq6uhY2hphKYyZN9G553zgGIZ9KPDw4tTrV99R6q6ipyv2nlruQ' });
+                if (token) {
+                    console.log('FCM Token:', token);
+                    document.getElementById('status').textContent = 'Notifications ready! Token generated.';
+                    // Send token to server (you can use Fetch or Firebase Database)
+                    await saveTokenToServer(token);
+                } else {
+                    console.log('No registration token available.');
+                    document.getElementById('status').textContent = 'No token available. Try again.';
+                    document.getElementById('status').classList.add('error');
+                }
+            } catch (err) {
+                console.error('Error getting token:', err);
+                document.getElementById('status').textContent = 'Error generating token.';
+                document.getElementById('status').classList.add('error');
+            }
+        }
+
+        // Save token to server or Firebase Database
+        async function saveTokenToServer(token) {
+            // Example: Send token to your Render backend
+            try {
+                const response = await fetch('https://your-render-backend.onrender.com/save-token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token })
+                });
+                if (response.ok) {
+                    console.log('Token saved to server.');
+                } else {
+                    console.error('Failed to save token.');
+                }
+            } catch (err) {
+                console.error('Error saving token:', err);
+            }
+        }
+
+        // Handle foreground notifications
+        onMessage(messaging, payload => {
+            console.log('Foreground message received:', payload);
+            const notificationTitle = payload.notification.title;
+            const notificationOptions = {
+                body: payload.notification.body,
+                icon: '/icon.png' // Ensure you have an icon.png in your GitHub repo root
+            };
+            new Notification(notificationTitle, notificationOptions);
+        });
+    </script>
+</body>
+</html>
